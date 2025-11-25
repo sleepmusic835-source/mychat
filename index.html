@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Chat</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -16,7 +17,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      height: auto;
     }
 
     .chat-container {
@@ -95,7 +97,7 @@
       padding: 12px;
       border-radius: 10px;
       border: 1px solid #ccc;
-      font-size: 15px;
+      font-size: 16px;
     }
 
     button {
@@ -112,11 +114,13 @@
     button:hover {
       background: #0056d2;
     }
+
   </style>
 </head>
 <body>
 
 <div class="chat-container">
+
   <div class="header">🔥 Super Chat Room</div>
 
   <div id="messages"></div>
@@ -125,6 +129,7 @@
     <input id="msgInput" placeholder="Хабарлама жаз..." />
     <button onclick="sendMsg()">➡</button>
   </div>
+
 </div>
 
 <script>
