@@ -127,7 +127,6 @@
       border-radius: 10px;
       margin-top: 5px;
     }
-
   </style>
 </head>
 <body>
@@ -229,14 +228,18 @@
         });
 
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        if (data.error) {
+          console.error("Ошибка Edge Function:", data.error);
+          alert("Ошибка при загрузке файла: " + data.error);
+          return;
+        }
 
         media_url = data.url;
         media_type = file.type.startsWith("image") ? "image" : "video";
 
       } catch(err) {
         console.error("Ошибка загрузки файла через функцию:", err);
-        alert("Не удалось загрузить файл.");
+        alert("Не удалось загрузить файл. Проверьте Edge Function и бакет Supabase.");
         return;
       }
     }
