@@ -98,7 +98,7 @@
     if (fileWidget.value()) {
       try {
         const fileInfo = await fileWidget.value();
-        media_url = fileInfo.cdnUrl;
+        media_url = fileInfo.cdnUrl + "-/quality/better/";
         media_type = fileInfo.mimeType.startsWith("image") ? "image" : "video";
       } catch(err) {
         console.error("Uploadcare error:", err);
