@@ -9,37 +9,102 @@
 
 <style>
     body {
-        font-family: Arial;
-        background: #f0f0f0;
-        padding: 20px;
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #eef1f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
     }
-    #chatBox {
+
+    .chat-box {
         width: 100%;
-        max-width: 450px;
-        height: 500px;
-        overflow-y: auto;
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 15px;
+        max-width: 460px;
+        height: 90vh;
+        background: #fff;
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
-    .msg {
-        background: #e8e8e8;
-        padding: 8px 10px;
-        margin: 8px 0;
-        border-radius: 6px;
+
+    .header {
+        background: linear-gradient(135deg, #007bff, #6610f2);
+        color: #fff;
+        padding: 18px;
+        font-size: 20px;
+        font-weight: bold;
+        text-align: center;
     }
-    .chat-img {
-        max-width: 200px;
-        border-radius: 8px;
-    }
-    .chat-video {
-        max-width: 250px;
-        border-radius: 8px;
-    }
+
     #online {
-        font-size: 18px;
-        margin-bottom: 10px;
+        font-size: 14px;
+        opacity: 0.9;
+        margin-top: 4px;
+    }
+
+    #chatBox {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #f9fbfd;
+    }
+
+    .msg {
+        max-width: 75%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: #e8efff;
+        word-break: break-word;
+    }
+
+    .me {
+        align-self: flex-end;
+        background: #cfe2ff;
+        border-bottom-right-radius: 2px;
+    }
+
+    .other {
+        align-self: flex-start;
+        background: #e2ffe8;
+        border-bottom-left-radius: 2px;
+    }
+
+    .msg img, .msg video {
+        max-width: 100%;
+        border-radius: 12px;
+        margin-top: 5px;
+    }
+
+    .input-area {
+        display: flex;
+        padding: 10px;
+        gap: 8px;
+        background: #f0f0f0;
+        border-top: 1px solid #ddd;
+    }
+
+    #msgInput {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+    }
+
+    button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: none;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
         font-weight: bold;
     }
 </style>
@@ -47,133 +112,146 @@
 
 <body>
 
-<div id="online">Online: 0</div>
+<div class="chat-box">
 
-<div id="chatBox"></div>
+    <div class="header">
+        🔥 Nurik Chat
+        <div id="online">Online: 0</div>
+    </div>
 
-<input id="msgInput" placeholder="Message..." style="width: 70%; padding: 8px;">
-<button onclick="sendText()">Send</button>  
-<br><br>
+    <div id="chatBox"></div>
 
-<input type="file" id="fileInput" accept="image/*,video/*">
-<button onclick="sendFile()">Send File</button>
+    <div class="input-area">
+        <button onclick="document.getElementById('fileInput').click()">📎</button>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
+        <input id="msgInput" placeholder="Message..." />
+        <button onclick="sendText()">➡</button>
+    </div>
+
+</div>
 
 <script>
-// ------------------------------------------------
-// 1) SUPABASE INIT
-// ------------------------------------------------
+/* ----------------------
+    1) SUPABASE INIT
+------------------------- */
 
-const SUPABASE_URL = "https://hhoeyihdmnugrkytalxd.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2V5aWhkbW51Z3JreXRhbHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNTg2MzAsImV4cCI6MjA3OTgzNDYzMH0.ZeIrxAMydhg-JXTDInK-VAomIG73GgKLLHdWVh4Stao";
-
-const supa = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = supabase.createClient(
+  "https://hhoeyihdmnugrkytalxd.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2V5aWhkbW51Z3JreXRhbHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNTg2MzAsImV4cCI6MjA3OTgzNDYzMH0.ZeIrxAMydhg-JXTDInK-VAomIG73GgKLLHdWVh4Stao"
+);
 
 const userId = "user-" + Math.floor(Math.random() * 999999);
 
-// ------------------------------------------------
-// 2) PRESENCE (Online Counter)
-// ------------------------------------------------
+/* ----------------------
+   2) REALTIME PRESENCE
+------------------------- */
 
-const presence = supa.channel("online-room", {
+const presence = supabase.channel("online-room", {
     config: { presence: { key: userId } }
 });
 
 presence
     .on("presence", { event: "sync" }, () => {
         const state = presence.presenceState();
-        const onlineCount = Object.keys(state).length;
-        document.getElementById("online").innerText = "Online: " + onlineCount;
+        document.getElementById("online").innerText =
+            "Online: " + Object.keys(state).length;
     })
     .subscribe();
 
-// ------------------------------------------------
-// 3) REALTIME MESSAGE LISTENER
-// ------------------------------------------------
+/* ----------------------
+   3) REALTIME MESSAGES
+------------------------- */
 
-supa
+supabase
     .channel("chat-table")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (data) => {
-        renderMessage(data.new);
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        renderMessage(payload.new);
     })
     .subscribe();
 
 loadMessages();
 
 async function loadMessages() {
-    const { data } = await supa.from("messages").select("*").order("id", { ascending: true });
+    let { data } = await supabase.from("messages").select("*").order("id", { ascending: true });
     data.forEach(m => renderMessage(m));
 }
 
-// ------------------------------------------------
-// 4) RENDER MESSAGE
-// ------------------------------------------------
+/* ----------------------
+   4) RENDER MESSAGE
+------------------------- */
 
 function renderMessage(msg) {
-    const box = document.getElementById("chatBox");
+    const box = document.createElement("div");
+    box.className = "msg " + (msg.user === userId ? "me" : "other");
 
     if (msg.type === "text") {
-        box.innerHTML += `<div class="msg"><b>${msg.user}:</b> ${msg.content}</div>`;
+        box.innerHTML = msg.content;
     }
 
     if (msg.type === "image") {
-        box.innerHTML += `<div class="msg"><b>${msg.user}</b><br>
-        <img src="${msg.content}" class="chat-img"></div>`;
+        box.innerHTML = `<img src="${msg.content}">`;
     }
 
     if (msg.type === "video") {
-        box.innerHTML += `<div class="msg"><b>${msg.user}</b><br>
-        <video controls class="chat-video">
-            <source src="${msg.content}">
-        </video></div>`;
+        box.innerHTML = `
+            <video controls>
+                <source src="${msg.content}">
+            </video>`;
     }
 
-    box.scrollTop = box.scrollHeight;
+    document.getElementById("chatBox").appendChild(box);
+    document.getElementById("chatBox").scrollTop = chatBox.scrollHeight;
 }
 
-// ------------------------------------------------
-// 5) SEND TEXT
-// ------------------------------------------------
+/* ----------------------
+   5) SEND TEXT
+------------------------- */
 
 async function sendText() {
-    const text = document.getElementById("msgInput").value;
+    const text = msgInput.value;
     if (!text) return;
 
-    await supa.from("messages").insert({
+    await supabase.from("messages").insert({
         user: userId,
         type: "text",
         content: text
     });
 
-    document.getElementById("msgInput").value = "";
+    msgInput.value = "";
 }
 
-// ------------------------------------------------
-// 6) SEND FILE (IMAGE/VIDEO)
-// ------------------------------------------------
+/* ----------------------
+   6) SEND IMAGE / VIDEO
+------------------------- */
 
-async function sendFile() {
-    const file = document.getElementById("fileInput").files[0];
+document.getElementById("fileInput").onchange = async function () {
+    const file = this.files[0];
     if (!file) return;
 
-    const path = `chat/${Date.now()}-${file.name}`;
+    const path = `${userId}/${Date.now()}_${file.name}`;
 
-    await supa.storage.from("chat-files").upload(path, file);
+    const { error } = await supabase.storage
+        .from("chat-files")
+        .upload(path, file);
 
-    const publicUrl = supa.storage
+    if (error) {
+        console.log(error);
+        return;
+    }
+
+    const publicUrl = supabase.storage
         .from("chat-files")
         .getPublicUrl(path).data.publicUrl;
 
-    const type = file.type.startsWith("video") ? "video" : "image";
-
-    await supa.from("messages").insert({
+    await supabase.from("messages").insert({
         user: userId,
-        type: type,
+        type: file.type.startsWith("video") ? "video" : "image",
         content: publicUrl
     });
 
-    document.getElementById("fileInput").value = "";
-}
-
+    fileInput.value = "";
+};
 </script>
+
 </body>
 </html>
