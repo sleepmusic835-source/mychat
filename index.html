@@ -1,297 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="kk">
 <head>
-  <meta charset="UTF-8" />
-  <title>Super Chat 2.0</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Chat</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
+<style>
     body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #eef1f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+        margin: 0;
+        background: #0f0f11;
+        font-family: sans-serif;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
     }
 
-    .chat-box {
-      width: 100%;
-      max-width: 450px;
-      height: 90vh;
-      background: #fff;
-      border-radius: 20px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    #online {
+        text-align: center;
+        padding: 8px 0;
+        background: #1d1d21;
+        font-size: 14px;
     }
 
-    .header {
-      background: linear-gradient(135deg, #007bff, #6610f2);
-      color: #fff;
-      padding: 18px;
-      font-size: 20px;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    #onlineCount {
-      font-size: 13px;
-      opacity: 0.9;
-      margin-top: 5px;
-    }
-
-    #messages {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #f9fbfd;
+    #chat {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
     }
 
     .msg {
-      max-width: 75%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      background: #e8efff;
-      position: relative;
-      word-break: break-word;
-      animation: fadeIn .2s ease-in-out;
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #26262a;
+        max-width: 80%;
+        word-wrap: break-word;
     }
 
-    .my {
-      align-self: flex-end;
-      background: #cfe2ff;
-      border-bottom-right-radius: 2px;
+    img, video {
+        max-width: 100%;
+        border-radius: 10px;
+        margin-top: 5px;
     }
 
-    .other {
-      align-self: flex-start;
-      background: #e2ffe8;
-      border-bottom-left-radius: 2px;
+    #inputBox {
+        display: flex;
+        padding: 10px;
+        background: #1d1d21;
+        gap: 6px;
     }
 
-    .msg img, .msg video {
-      max-width: 100%;
-      border-radius: 12px;
-      margin-top: 5px;
+    #text {
+        flex: 1;
+        padding: 8px;
+        border-radius: 6px;
+        border: none;
+        outline: none;
+        font-size: 15px;
     }
 
-    .time {
-      font-size: 10px;
-      opacity: 0.6;
-      margin-top: 4px;
-      text-align: right;
+    #send {
+        padding: 8px 12px;
+        background: #3c7eff;
+        border: none;
+        border-radius: 6px;
+        color: white;
     }
 
-    .input-area {
-      display: flex;
-      padding: 10px;
-      gap: 8px;
-      background: #f0f0f0;
-      border-top: 1px solid #ddd;
+    #fileInput {
+        display: none;
     }
 
-    #msgInput {
-      flex: 1;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 15px;
+    .btn {
+        background: #333;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 14px;
     }
-
-    button {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-    }
-  </style>
+</style>
 </head>
-
 <body>
 
-<div class="chat-box">
+<div id="online">Онлайн: 0</div>
 
-  <div class="header">
-    🔥 Super Chat
-    <div id="onlineCount">Онлайн: 1</div>
-  </div>
+<div id="chat"></div>
 
-  <div id="messages"></div>
-
-  <div class="input-area">
-    <button onclick="chooseFile()">📎</button>
-    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;" />
-    <input id="msgInput" placeholder="Хабарлама..." />
-    <button onclick="sendMsg()">➡</button>
-  </div>
-
+<div id="inputBox">
+    <label for="fileInput" class="btn">📎</label>
+    <input type="file" id="fileInput" accept="image/*,video/*">
+    <input id="text" placeholder="Жаз...">
+    <button id="send">➤</button>
 </div>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
 <script>
-  /* -------------------------
-      1. Firebase Setup
-  ------------------------- */
-  const firebaseConfig = {
-    apiKey: "AIzaSyCxQHfCsvz2XFJgvulWzfYshK8etFbT7Uk",
-    authDomain: "mychat-b4c1a.firebaseapp.com",
-    databaseURL: "https://mychat-b4c1a-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "mychat-b4c1a",
-    storageBucket: "mychat-b4c1a.firebasestorage.app",
-    messagingSenderId: "829100815620",
-    appId: "1:829100815620:web:d0be535fd88c5e516b4c51"
-  };
+// ----------------------
+// 1) Firebase settings
+// ----------------------
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:000000000000"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+// ----------------------
+// 2) Online users counter
+// ----------------------
+const userRef = db.ref("online/" + Date.now());
+userRef.set(true);
+userRef.onDisconnect().remove();
 
-  let userId = null;
+db.ref("online").on("value", snap => {
+    const count = snap.numChildren();
+    document.getElementById("online").innerText = "Онлайн: " + count;
+});
 
-  /* -------------------------
-      2. Supabase Setup
-  ------------------------- */
+// ----------------------
+// 3) Sending text messages
+// ----------------------
+document.getElementById("send").onclick = sendText;
+document.getElementById("text").addEventListener("keypress", e => {
+    if (e.key === "Enter") sendText();
+});
 
-  const supabase = window.supabase.createClient(
-    "SUPABASE_URL",          // ← ОСЫ ЖЕРГЕ өз URL-ыңды қой
-    "SUPABASE_PUBLIC_KEY"    // ← ОСЫ ЖЕРГЕ public anon key қой
-  );
-
-  /* -------------------------
-      3. Auth + Presence
-  ------------------------- */
-
-  auth.signInAnonymously().then(user => {
-    userId = user.user.uid;
-
-    const presenceRef = db.ref("online/" + userId);
-    presenceRef.set(true);
-    presenceRef.onDisconnect().remove();
-
-    db.ref("online").on("value", snap => {
-      document.getElementById("onlineCount").innerText =
-        "Онлайн: " + snap.numChildren();
-    });
-
-    listenMessages();
-  });
-
-  /* -------------------------
-      4. Listen Messages
-  ------------------------- */
-
-  function listenMessages() {
-    db.ref("messages").on("child_added", snap => {
-      showMessage(snap.val());
-    });
-  }
-
-  function showMessage(msg) {
-    const box = document.createElement("div");
-    box.className = "msg " + (msg.uid === userId ? "my" : "other");
-
-    if (msg.text) box.innerHTML = msg.text;
-
-    if (msg.mediaType === "image") {
-      box.innerHTML = `<img src="${msg.media}">`;
-    }
-
-    if (msg.mediaType === "video") {
-      box.innerHTML = `
-        <video controls>
-          <source src="${msg.media}">
-        </video>`;
-    }
-
-    box.innerHTML += `<div class="time">${formatTime(msg.time)}</div>`;
-
-    document.getElementById("messages").appendChild(box);
-    scrollDown();
-  }
-
-  /* -------------------------
-      5. Sending Messages
-  ------------------------- */
-
-  function sendMsg() {
-    const text = document.getElementById("msgInput").value;
-    if (!text) return;
+function sendText() {
+    const txt = document.getElementById("text").value.trim();
+    if (!txt) return;
 
     db.ref("messages").push({
-      uid: userId,
-      text,
-      time: Date.now()
+        type: "text",
+        text: txt,
+        time: Date.now()
     });
 
-    document.getElementById("msgInput").value = "";
-  }
+    document.getElementById("text").value = "";
+}
 
-  /* -------------------------
-      6. File Upload (Supabase)
-  ------------------------- */
-
-  function chooseFile() {
-    document.getElementById("fileInput").click();
-  }
-
-  document.getElementById("fileInput").onchange = async function () {
-    const file = this.files[0];
+// ----------------------
+// 4) Photo/video sending (base64)
+// ----------------------
+document.getElementById("fileInput").onchange = function(e) {
+    const file = e.target.files[0];
     if (!file) return;
 
-    const filePath = `${userId}/${Date.now()}_${file.name}`;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        db.ref("messages").push({
+            type: file.type.startsWith("image") ? "image" : "video",
+            data: evt.target.result,
+            time: Date.now()
+        });
+    };
+    reader.readAsDataURL(file);
+};
 
-    const { data, error } = await supabase.storage
-      .from("media")
-      .upload(filePath, file);
+// ----------------------
+// 5) Display messages
+// ----------------------
+db.ref("messages").on("child_added", snap => {
+    const msg = snap.val();
+    const div = document.createElement("div");
+    div.className = "msg";
 
-    if (error) {
-      console.error(error);
-      return;
+    if (msg.type === "text") {
+        div.textContent = msg.text;
+    } 
+    else if (msg.type === "image") {
+        div.innerHTML = `<img src="${msg.data}">`;
+    } 
+    else if (msg.type === "video") {
+        div.innerHTML = `<video controls src="${msg.data}"></video>`;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("media")
-      .getPublicUrl(filePath);
-
-    db.ref("messages").push({
-      uid: userId,
-      media: urlData.publicUrl,
-      mediaType: file.type.startsWith("image") ? "image" : "video",
-      time: Date.now()
-    });
-  };
-
-  /* -------------------------
-      Utilities
-  ------------------------- */
-
-  function scrollDown() {
-    const div = document.getElementById("messages");
-    div.scrollTop = div.scrollHeight;
-  }
-
-  function formatTime(t) {
-    const d = new Date(t);
-    return d.getHours().toString().padStart(2, "0") + ":" +
-           d.getMinutes().toString().padStart(2, "0");
-  }
+    document.getElementById("chat").appendChild(div);
+    document.getElementById("chat").scrollTop = 9999999;
+});
 </script>
-
 </body>
 </html>
