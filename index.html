@@ -10,9 +10,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.10.0/dist/supabase.min.js"></script>
-
   <style>
     body {
       margin: 0;
@@ -211,12 +208,7 @@
     div.scrollTop = div.scrollHeight;
   }
 
-  // ------------------ Supabase ------------------
-  const supabaseUrl = "https://hhoeyihdmnugrkytalxd.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2V5aWhkbW51Z3JreXRhbHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNTg2MzAsImV4cCI6MjA3OTgzNDYzMH0.ZeIrxAMydhg-JXTDInK-VAomIG73GgKLLHdWVh4Stao";
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-  // ------------------ Отправка сообщений ------------------
+  // ------------------ Отправка сообщений через Edge Function ------------------
   async function sendMsg() {
     const text = document.getElementById("msgInput").value;
     const file = document.getElementById("fileInput").files[0];
@@ -227,21 +219,24 @@
     let media_type = null;
 
     if (file) {
-      // Загружаем файл в Supabase Storage
       try {
-        const { data, error } = await supabase.storage
-          .from('chat_media') // бакет chat_media должен существовать
-          .upload('public/' + Date.now() + '_' + file.name, file);
+        const formData = new FormData();
+        formData.append("file", file);
 
-        if (error) throw error;
+        const res = await fetch("https://hhoeyihdmnugrkytalxd.supabase.co/functions/v1/smart-endpoint", {
+          method: "POST",
+          body: formData
+        });
 
-        const { publicUrl } = supabase.storage.from('chat_media').getPublicUrl(data.path);
-        media_url = publicUrl;
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        media_url = data.url;
         media_type = file.type.startsWith("image") ? "image" : "video";
 
       } catch(err) {
-        console.error("Ошибка загрузки файла в Supabase:", err);
-        alert("Не удалось загрузить файл. Проверьте бакет Supabase.");
+        console.error("Ошибка загрузки файла через функцию:", err);
+        alert("Не удалось загрузить файл.");
         return;
       }
     }
