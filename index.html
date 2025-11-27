@@ -228,18 +228,25 @@
 
     if (file) {
       // Загружаем файл в Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('chat_media') // нужно создать бакет chat_media
-        .upload('public/' + Date.now() + '_' + file.name, file);
+      try {
+        const { data, error } = await supabase.storage
+          .from('chat_media') // бакет chat_media должен существовать
+          .upload('public/' + Date.now() + '_' + file.name, file);
 
-      if (!error) {
+        if (error) throw error;
+
         const { publicUrl } = supabase.storage.from('chat_media').getPublicUrl(data.path);
         media_url = publicUrl;
         media_type = file.type.startsWith("image") ? "image" : "video";
+
+      } catch(err) {
+        console.error("Ошибка загрузки файла в Supabase:", err);
+        alert("Не удалось загрузить файл. Проверьте бакет Supabase.");
+        return;
       }
     }
 
-    // Сохраняем сообщение в Firebase (как раньше)
+    // Сохраняем сообщение в Firebase
     db.ref("messages").push({
       uid: userId,
       text: text || "",
