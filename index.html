@@ -1,111 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Nurik Chat</title>
-
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Chat</title>
 
 <style>
     body {
         margin: 0;
-        font-family: "Segoe UI", sans-serif;
-        background: #eef1f5;
+        padding: 0;
+        background: #f0f0f5;
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
+        font-family: Arial, sans-serif;
     }
 
     .chat-box {
         width: 100%;
-        max-width: 460px;
-        height: 90vh;
-        background: #fff;
+        max-width: 450px;
+        height: 600px;   /* ← ТЕК ОСЫ ЖЕР ТҮЗЕЛГЕН */
+        background: white;
         border-radius: 20px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    }
-
-    .header {
-        background: linear-gradient(135deg, #007bff, #6610f2);
-        color: #fff;
-        padding: 18px;
-        font-size: 20px;
-        font-weight: bold;
-        text-align: center;
-    }
-
-    #online {
-        font-size: 14px;
-        opacity: 0.9;
-        margin-top: 4px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
     }
 
     #chatBox {
         flex: 1;
         padding: 15px;
         overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        background: #f9fbfd;
     }
 
     .msg {
-        max-width: 75%;
         padding: 10px 14px;
-        border-radius: 14px;
-        background: #e8efff;
+        margin: 10px 0;
+        border-radius: 15px;
+        max-width: 70%;
         word-break: break-word;
     }
 
     .me {
-        align-self: flex-end;
-        background: #cfe2ff;
-        border-bottom-right-radius: 2px;
+        background: #d4f1ff;
+        margin-left: auto;
     }
 
     .other {
-        align-self: flex-start;
-        background: #e2ffe8;
-        border-bottom-left-radius: 2px;
-    }
-
-    .msg img, .msg video {
-        max-width: 100%;
-        border-radius: 12px;
-        margin-top: 5px;
+        background: #e8e8e8;
+        margin-right: auto;
     }
 
     .input-area {
         display: flex;
         padding: 10px;
-        gap: 8px;
-        background: #f0f0f0;
+        background: #fff;
         border-top: 1px solid #ddd;
     }
 
-    #msgInput {
+    input {
         flex: 1;
-        padding: 12px;
-        border-radius: 10px;
+        padding: 10px;
         border: 1px solid #ccc;
-        font-size: 15px;
+        border-radius: 10px;
+        margin-right: 10px;
     }
 
     button {
-        padding: 10px 14px;
-        border-radius: 10px;
+        padding: 10px 16px;
         border: none;
-        background: #007bff;
+        background: #4a90e2;
         color: white;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
+        border-radius: 10px;
     }
 </style>
 </head>
@@ -113,144 +80,34 @@
 <body>
 
 <div class="chat-box">
-
-    <div class="header">
-        🔥 Nurik Chat
-        <div id="online">Online: 0</div>
-    </div>
-
     <div id="chatBox"></div>
 
     <div class="input-area">
-        <button onclick="document.getElementById('fileInput').click()">📎</button>
-        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
-        <input id="msgInput" placeholder="Message..." />
-        <button onclick="sendText()">➡</button>
+        <input id="messageInput" placeholder="Жаз...">
+        <button onclick="sendMessage()">→</button>
     </div>
-
 </div>
 
 <script>
-/* ----------------------
-    1) SUPABASE INIT
-------------------------- */
+    const chatBoxEl = document.getElementById("chatBox");
 
-const supabase = supabase.createClient(
-  "https://hhoeyihdmnugrkytalxd.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2V5aWhkbW51Z3JreXRhbHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNTg2MzAsImV4cCI6MjA3OTgzNDYzMH0.ZeIrxAMydhg-JXTDInK-VAomIG73GgKLLHdWVh4Stao"
-);
+    function renderMessage(msg, fromMe=false) {
+        const box = document.createElement("div");
+        box.className = "msg " + (fromMe ? "me" : "other");
+        box.innerHTML = msg;
 
-const userId = "user-" + Math.floor(Math.random() * 999999);
-
-/* ----------------------
-   2) REALTIME PRESENCE
-------------------------- */
-
-const presence = supabase.channel("online-room", {
-    config: { presence: { key: userId } }
-});
-
-presence
-    .on("presence", { event: "sync" }, () => {
-        const state = presence.presenceState();
-        document.getElementById("online").innerText =
-            "Online: " + Object.keys(state).length;
-    })
-    .subscribe();
-
-/* ----------------------
-   3) REALTIME MESSAGES
-------------------------- */
-
-supabase
-    .channel("chat-table")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        renderMessage(payload.new);
-    })
-    .subscribe();
-
-loadMessages();
-
-async function loadMessages() {
-    let { data } = await supabase.from("messages").select("*").order("id", { ascending: true });
-    data.forEach(m => renderMessage(m));
-}
-
-/* ----------------------
-   4) RENDER MESSAGE
-------------------------- */
-
-function renderMessage(msg) {
-    const box = document.createElement("div");
-    box.className = "msg " + (msg.user === userId ? "me" : "other");
-
-    if (msg.type === "text") {
-        box.innerHTML = msg.content;
+        chatBoxEl.appendChild(box);
+        chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
     }
 
-    if (msg.type === "image") {
-        box.innerHTML = `<img src="${msg.content}">`;
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const text = input.value.trim();
+        if (!text) return;
+
+        renderMessage(text, true); 
+        input.value = "";
     }
-
-    if (msg.type === "video") {
-        box.innerHTML = `
-            <video controls>
-                <source src="${msg.content}">
-            </video>`;
-    }
-
-    document.getElementById("chatBox").appendChild(box);
-    document.getElementById("chatBox").scrollTop = chatBox.scrollHeight;
-}
-
-/* ----------------------
-   5) SEND TEXT
-------------------------- */
-
-async function sendText() {
-    const text = msgInput.value;
-    if (!text) return;
-
-    await supabase.from("messages").insert({
-        user: userId,
-        type: "text",
-        content: text
-    });
-
-    msgInput.value = "";
-}
-
-/* ----------------------
-   6) SEND IMAGE / VIDEO
-------------------------- */
-
-document.getElementById("fileInput").onchange = async function () {
-    const file = this.files[0];
-    if (!file) return;
-
-    const path = `${userId}/${Date.now()}_${file.name}`;
-
-    const { error } = await supabase.storage
-        .from("chat-files")
-        .upload(path, file);
-
-    if (error) {
-        console.log(error);
-        return;
-    }
-
-    const publicUrl = supabase.storage
-        .from("chat-files")
-        .getPublicUrl(path).data.publicUrl;
-
-    await supabase.from("messages").insert({
-        user: userId,
-        type: file.type.startsWith("video") ? "video" : "image",
-        content: publicUrl
-    });
-
-    fileInput.value = "";
-};
 </script>
 
 </body>
