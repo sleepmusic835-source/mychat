@@ -2,44 +2,52 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Chat</title>
+  <title>Super Chat 2.0</title>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background: #f2f5f8;
+      background: #eef1f5;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      height: auto;
+      height: 100vh;
     }
 
-    .chat-container {
+    .chat-box {
       width: 100%;
       max-width: 450px;
       height: 90vh;
-      background: white;
+      background: #fff;
       border-radius: 20px;
       display: flex;
       flex-direction: column;
-      box-shadow: 0px 10px 30px rgba(0,0,0,0.1);
       overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
 
     .header {
       background: linear-gradient(135deg, #007bff, #6610f2);
-      padding: 20px;
-      color: white;
-      text-align: center;
+      color: #fff;
+      padding: 18px;
       font-size: 20px;
       font-weight: bold;
+      text-align: center;
+    }
+
+    #onlineCount {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-top: 5px;
     }
 
     #messages {
@@ -48,21 +56,18 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      background: #f9fbfd;
     }
 
     .msg {
       max-width: 75%;
       padding: 10px 14px;
       border-radius: 14px;
+      background: #e8efff;
       position: relative;
       word-break: break-word;
-      animation: fadeIn 0.2s ease-in-out;
-    }
-
-    @keyframes fadeIn {
-      from {opacity: 0; transform: translateY(5px);}
-      to {opacity: 1; transform: translateY(0);}
+      animation: fadeIn .2s ease-in-out;
     }
 
     .my {
@@ -77,17 +82,23 @@
       border-bottom-left-radius: 2px;
     }
 
+    .msg img, .msg video {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 5px;
+    }
+
     .time {
       font-size: 10px;
       opacity: 0.6;
-      margin-top: 3px;
+      margin-top: 4px;
       text-align: right;
     }
 
     .input-area {
       display: flex;
       padding: 10px;
-      gap: 10px;
+      gap: 8px;
       background: #f0f0f0;
       border-top: 1px solid #ddd;
     }
@@ -97,42 +108,46 @@
       padding: 12px;
       border-radius: 10px;
       border: 1px solid #ccc;
-      font-size: 16px;
+      font-size: 15px;
     }
 
     button {
-      padding: 12px 20px;
+      padding: 10px 14px;
       border-radius: 10px;
-      background: #007bff;
       border: none;
+      background: #007bff;
       color: white;
-      font-weight: bold;
       cursor: pointer;
-      transition: 0.2s;
+      font-size: 16px;
+      font-weight: bold;
     }
-
-    button:hover {
-      background: #0056d2;
-    }
-
   </style>
 </head>
+
 <body>
 
-<div class="chat-container">
+<div class="chat-box">
 
-  <div class="header">🔥 Super Chat Room</div>
+  <div class="header">
+    🔥 Super Chat
+    <div id="onlineCount">Онлайн: 1</div>
+  </div>
 
   <div id="messages"></div>
 
   <div class="input-area">
-    <input id="msgInput" placeholder="Хабарлама жаз..." />
+    <button onclick="chooseFile()">📎</button>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;" />
+    <input id="msgInput" placeholder="Хабарлама..." />
     <button onclick="sendMsg()">➡</button>
   </div>
 
 </div>
 
 <script>
+  /* -------------------------
+      1. Firebase Setup
+  ------------------------- */
   const firebaseConfig = {
     apiKey: "AIzaSyCxQHfCsvz2XFJgvulWzfYshK8etFbT7Uk",
     authDomain: "mychat-b4c1a.firebaseapp.com",
@@ -149,25 +164,70 @@
 
   let userId = null;
 
+  /* -------------------------
+      2. Supabase Setup
+  ------------------------- */
+
+  const supabase = window.supabase.createClient(
+    "SUPABASE_URL",          // ← ОСЫ ЖЕРГЕ өз URL-ыңды қой
+    "SUPABASE_PUBLIC_KEY"    // ← ОСЫ ЖЕРГЕ public anon key қой
+  );
+
+  /* -------------------------
+      3. Auth + Presence
+  ------------------------- */
+
   auth.signInAnonymously().then(user => {
     userId = user.user.uid;
+
+    const presenceRef = db.ref("online/" + userId);
+    presenceRef.set(true);
+    presenceRef.onDisconnect().remove();
+
+    db.ref("online").on("value", snap => {
+      document.getElementById("onlineCount").innerText =
+        "Онлайн: " + snap.numChildren();
+    });
+
     listenMessages();
   });
 
+  /* -------------------------
+      4. Listen Messages
+  ------------------------- */
+
   function listenMessages() {
-    db.ref("messages").on("child_added", snapshot => {
-      const msg = snapshot.val();
-      showMessage(msg);
+    db.ref("messages").on("child_added", snap => {
+      showMessage(snap.val());
     });
   }
 
   function showMessage(msg) {
-    const div = document.createElement("div");
-    div.className = "msg " + (msg.uid === userId ? "my" : "other");
-    div.innerHTML = msg.text + `<div class="time">${formatTime(msg.time)}</div>`;
-    document.getElementById("messages").appendChild(div);
+    const box = document.createElement("div");
+    box.className = "msg " + (msg.uid === userId ? "my" : "other");
+
+    if (msg.text) box.innerHTML = msg.text;
+
+    if (msg.mediaType === "image") {
+      box.innerHTML = `<img src="${msg.media}">`;
+    }
+
+    if (msg.mediaType === "video") {
+      box.innerHTML = `
+        <video controls>
+          <source src="${msg.media}">
+        </video>`;
+    }
+
+    box.innerHTML += `<div class="time">${formatTime(msg.time)}</div>`;
+
+    document.getElementById("messages").appendChild(box);
     scrollDown();
   }
+
+  /* -------------------------
+      5. Sending Messages
+  ------------------------- */
 
   function sendMsg() {
     const text = document.getElementById("msgInput").value;
@@ -175,22 +235,61 @@
 
     db.ref("messages").push({
       uid: userId,
-      text: text,
+      text,
       time: Date.now()
     });
 
     document.getElementById("msgInput").value = "";
   }
 
-  function formatTime(t) {
-    const d = new Date(t);
-    return d.getHours().toString().padStart(2,"0") + ":" +
-           d.getMinutes().toString().padStart(2,"0");
+  /* -------------------------
+      6. File Upload (Supabase)
+  ------------------------- */
+
+  function chooseFile() {
+    document.getElementById("fileInput").click();
   }
+
+  document.getElementById("fileInput").onchange = async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const filePath = `${userId}/${Date.now()}_${file.name}`;
+
+    const { data, error } = await supabase.storage
+      .from("media")
+      .upload(filePath, file);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("media")
+      .getPublicUrl(filePath);
+
+    db.ref("messages").push({
+      uid: userId,
+      media: urlData.publicUrl,
+      mediaType: file.type.startsWith("image") ? "image" : "video",
+      time: Date.now()
+    });
+  };
+
+  /* -------------------------
+      Utilities
+  ------------------------- */
 
   function scrollDown() {
     const div = document.getElementById("messages");
     div.scrollTop = div.scrollHeight;
+  }
+
+  function formatTime(t) {
+    const d = new Date(t);
+    return d.getHours().toString().padStart(2, "0") + ":" +
+           d.getMinutes().toString().padStart(2, "0");
   }
 </script>
 
